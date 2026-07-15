@@ -1,11 +1,10 @@
 # admin-site-api
 
-A Go-based REST API for license plates, trips, projects, and dad jokes, built with Gin and GORM, containerized for easy deployment.
-This project is designed for learning, prototyping, and as a foundation for a production API on VPS 2.0.
+A Go-based REST API for my Admin Site, built with Gin and GORM, containerized for easy deployment.
+This project is designed for learning, prototyping, and as a foundation for a production API on my VPS 2.0.
 
 ## Features
 
-- RESTful endpoints for plates, trips, projects, and jokes
 - Token-based authentication (login/logout) backed by Postgres
 - PostgreSQL integration via GORM ORM
 - Dockerized for local and remote deployment
@@ -14,16 +13,12 @@ This project is designed for learning, prototyping, and as a foundation for a pr
 
 ## Endpoints
 
-| Method | Path          | Auth required | Description                                        |
-| ------ | ------------- | -------------- | --------------------------------------------------- |
-| POST   | `/login`      | No             | Authenticate with `username`/`password`, returns a bearer token |
-| POST   | `/logout`     | Yes            | Invalidates the bearer token used on the request     |
-| GET    | `/plates`     | No             | List all plates                                      |
-| GET    | `/plates/:id` | No             | Get plate by ID                                      |
-| GET    | `/trips`      | No             | List trips                                           |
-| GET    | `/projects`   | No             | List all projects                                    |
-| POST   | `/joke`       | Yes            | Pull a random joke from the RapidAPI dad-jokes API   |
-| POST   | `/ping`       | No             | Test endpoint                                        |
+| Method | Path        | Auth required | Description                                                     |
+| ------ | ----------- | ------------- | --------------------------------------------------------------- |
+| POST   | `/login`    | No            | Authenticate with `username`/`password`, returns a bearer token |
+| POST   | `/logout`   | Yes           | Invalidates the bearer token used on the request                |
+| GET    | `/projects` | No            | List all projects                                               |
+| POST   | `/joke`     | Yes           | Pull a random joke from the RapidAPI dad-jokes API              |
 
 Authenticated routes expect an `Authorization: Bearer <token>` header, using a token returned from `/login`.
 
@@ -77,7 +72,7 @@ Authenticated routes expect an `Authorization: Bearer <token>` header, using a t
 
    ```sh
    export DB_HOST=localhost DB_USER=gorm DB_PASSWORD=your_secure_password \
-          DB_NAME=platefind_db DB_PORT=5432 DB_SSLMODE=disable \
+          DB_NAME=admin_db DB_PORT=5432 DB_SSLMODE=disable \
           RAPIDAPI_KEY=your_rapidapi_key
    go run .
    ```
@@ -131,7 +126,6 @@ The project includes a GitHub Actions workflow (`.github/workflows/deploy.yml`) 
 **Setup Requirements:**
 
 1. **GitHub Secrets** - Add these in your repository settings:
-
    - `VPS_HOST`: Your VPS IP address
    - `VPS_USER`: SSH username (e.g., `root`)
    - `VPS_SSH_KEY`: Your private SSH key
@@ -165,19 +159,17 @@ Your API will be available at your VPS IP on port 4269.
 
 ## Database Setup
 
-`CREATE_SQLS.sql` contains the full schema (plates, trips*, projects, users, tokens). Create the database and apply it:
+`CREATE_SQLS.sql` contains the full schema (plates, trips\*, projects, users, tokens). Create the database and apply it:
 
 ```sql
-CREATE DATABASE platefind_db;
+CREATE DATABASE ;
 CREATE USER gorm WITH PASSWORD 'your_secure_password';
-GRANT ALL PRIVILEGES ON DATABASE platefind_db TO gorm;
+GRANT ALL PRIVILEGES ON DATABASE admin_db TO gorm;
 ```
 
 ```sh
-psql -U postgres -d platefind_db -f CREATE_SQLS.sql
+psql -U postgres -d admin_db -f CREATE_SQLS.sql
 ```
-
-\* `trips` is currently served from an in-memory fixture in `routes/trips.go` rather than the database table.
 
 ### Creating a login user
 
@@ -204,8 +196,5 @@ CREATE_SQLS.sql          # Database schema
 
 - Harden for production (security, logging, error handling)
 - Add token expiry and refresh
-- Add a signup endpoint
-- Move `trips` off the in-memory fixture and into Postgres
-- Expand API endpoints
 
 ---

@@ -1,4 +1,4 @@
--- Create platefind_db database
+-- Create  database
 CREATE DATABASE admin_db;
 \c admin_db;
 --------------------------------------------------------------
