@@ -1,11 +1,12 @@
-# docker-go-demo
+# admin-site-api
 
-A Go-based REST API for querying US license plates, jokes, and trips, built with Gin and GORM, containerized for easy deployment.  
+A Go-based REST API for license plates, trips, projects, and dad jokes, built with Gin and GORM, containerized for easy deployment.
 This project is designed for learning, prototyping, and as a foundation for a production API on VPS 2.0.
 
 ## Features
 
-- RESTful endpoints for plates, jokes, and trips
+- RESTful endpoints for plates, trips, projects, and jokes
+- Token-based authentication (login/logout) backed by Postgres
 - PostgreSQL integration via GORM ORM
 - Dockerized for local and remote deployment
 - Environment-based configuration (dev/prod)
@@ -13,11 +14,18 @@ This project is designed for learning, prototyping, and as a foundation for a pr
 
 ## Endpoints
 
-- `GET /plates` — List all plates
-- `GET /plates/:id` — Get plate by ID
-- `GET /jokes` — List jokes
-- `GET /trips` — List trips
-- `POST /ping` — Test endpoint
+| Method | Path          | Auth required | Description                                        |
+| ------ | ------------- | -------------- | --------------------------------------------------- |
+| POST   | `/login`      | No             | Authenticate with `username`/`password`, returns a bearer token |
+| POST   | `/logout`     | Yes            | Invalidates the bearer token used on the request     |
+| GET    | `/plates`     | No             | List all plates                                      |
+| GET    | `/plates/:id` | No             | Get plate by ID                                      |
+| GET    | `/trips`      | No             | List trips                                           |
+| GET    | `/projects`   | No             | List all projects                                    |
+| POST   | `/joke`       | Yes            | Pull a random joke from the RapidAPI dad-jokes API   |
+| POST   | `/ping`       | No             | Test endpoint                                        |
+
+Authenticated routes expect an `Authorization: Bearer <token>` header, using a token returned from `/login`.
 
 ## Getting Started
 
@@ -26,17 +34,20 @@ This project is designed for learning, prototyping, and as a foundation for a pr
 - Go 1.21+
 - Docker & Docker Compose
 - PostgreSQL database
+- A [RapidAPI](https://rapidapi.com/KegenGuyll/api/dad-jokes) key if you want to use `POST /joke`
 
 ### Local Development
 
 1. Clone the repo:
 
    ```sh
-   git clone https://github.com/USERNAME/docker-go-demo.git
-   cd docker-go-demo
+   git clone https://github.com/cade-gray/admin-site-api.git
+   cd admin-site-api
    ```
 
-2. Edit `compose.dev.yaml` to set your development database credentials:
+2. Set up the database (see [Database Setup](#database-setup) below).
+
+3. Edit `compose.yaml` to set your database credentials and RapidAPI key:
 
    ```yaml
    services:
@@ -47,21 +58,31 @@ This project is designed for learning, prototyping, and as a foundation for a pr
        ports:
          - 4269:4269
        environment:
-         - DB_HOST=localhost
-         - DB_USER=youruser
-         - DB_PASSWORD=yourpass
-         - DB_NAME=yourdb
+         - DB_HOST=host
+         - DB_USER=user
+         - DB_PASSWORD=password
+         - DB_NAME=dbname
          - DB_PORT=5432
          - DB_SSLMODE=disable
+         - RAPIDAPI_KEY=your_rapidapi_key
    ```
 
-3. Build and run with Docker Compose:
+4. Build and run with Docker Compose:
 
    ```sh
-   docker compose -f compose.dev.yaml up --build
+   docker compose up --build
    ```
 
-4. Access the API at [http://localhost:4269](http://localhost:4269)
+   Or run locally without Docker:
+
+   ```sh
+   export DB_HOST=localhost DB_USER=gorm DB_PASSWORD=your_secure_password \
+          DB_NAME=platefind_db DB_PORT=5432 DB_SSLMODE=disable \
+          RAPIDAPI_KEY=your_rapidapi_key
+   go run .
+   ```
+
+5. Access the API at [http://localhost:4269](http://localhost:4269)
 
 ### Production Deployment
 
@@ -70,16 +91,16 @@ This project is designed for learning, prototyping, and as a foundation for a pr
 1. Build and push your image to GitHub Container Registry:
 
    ```sh
-   docker build -t ghcr.io/USERNAME/docker-go-demo:latest .
-   docker push ghcr.io/USERNAME/docker-go-demo:latest
+   docker build -t ghcr.io/cade-gray/admin-site-api:latest .
+   docker push ghcr.io/cade-gray/admin-site-api:latest
    ```
 
-2. On your VPS, edit `compose.prod.yaml` to set your production database credentials and to point to the image:
+2. On your VPS, create a `compose.yaml` pointing at the published image, with your production database credentials and RapidAPI key:
 
    ```yaml
    services:
      server:
-       image: ghcr.io/USERNAME/docker-go-demo:latest
+       image: ghcr.io/cade-gray/admin-site-api:latest
        ports:
          - 4269:4269
        environment:
@@ -89,18 +110,19 @@ This project is designed for learning, prototyping, and as a foundation for a pr
          - DB_NAME=proddb
          - DB_PORT=5432
          - DB_SSLMODE=disable
+         - RAPIDAPI_KEY=your_rapidapi_key
        restart: always
    ```
 
 3. Pull the image and run with Docker Compose:
 
    ```sh
-   docker compose -f compose.prod.yaml up -d
+   docker compose up -d
    ```
 
 #### Automated Deployment (GitHub Actions)
 
-The project includes a GitHub Actions workflow that automatically:
+The project includes a GitHub Actions workflow (`.github/workflows/deploy.yml`) that automatically:
 
 1. **Builds and pushes** Docker images to GitHub Container Registry on every push to `main`
 2. **Deploys to your VPS** automatically using SSH
@@ -113,15 +135,16 @@ The project includes a GitHub Actions workflow that automatically:
    - `VPS_HOST`: Your VPS IP address
    - `VPS_USER`: SSH username (e.g., `root`)
    - `VPS_SSH_KEY`: Your private SSH key
+   - `GH_TOKEN`: Token with `packages:write` used to push/pull images from GHCR
 
 2. **VPS Setup**:
 
    ```sh
    # Create deployment directory
-   sudo mkdir -p /srv/docker-go-demo
+   sudo mkdir -p /srv/admin-site-api
 
    # Copy your compose file
-   scp compose.prod.yaml your-user@your-vps:/srv/docker-go-demo/
+   scp compose.yaml your-user@your-vps:/srv/admin-site-api/
    ```
 
 3. **SSH Key Generation**:
@@ -130,6 +153,8 @@ The project includes a GitHub Actions workflow that automatically:
    ssh-keygen -t ed25519 -C "github-actions-deploy"
    ssh-copy-id -i ~/.ssh/id_ed25519.pub your-user@your-vps
    ```
+
+> **Note:** the deploy workflow currently runs `docker compose -f compose.dev.yaml ...` on the VPS. Make sure a `compose.dev.yaml` exists in `/srv/admin-site-api` on the server (or update the workflow to reference `compose.yaml`) before relying on automated deploys.
 
 **Workflow Triggers:**
 
@@ -140,7 +165,7 @@ Your API will be available at your VPS IP on port 4269.
 
 ## Database Setup
 
-Create a PostgreSQL user and database:
+`CREATE_SQLS.sql` contains the full schema (plates, trips*, projects, users, tokens). Create the database and apply it:
 
 ```sql
 CREATE DATABASE platefind_db;
@@ -148,23 +173,39 @@ CREATE USER gorm WITH PASSWORD 'your_secure_password';
 GRANT ALL PRIVILEGES ON DATABASE platefind_db TO gorm;
 ```
 
+```sh
+psql -U postgres -d platefind_db -f CREATE_SQLS.sql
+```
+
+\* `trips` is currently served from an in-memory fixture in `routes/trips.go` rather than the database table.
+
+### Creating a login user
+
+`POST /login` checks the `users` table for a bcrypt-hashed password. There's no signup endpoint yet, so seed a user manually. From a Go shell (`go run`) or `gorm` console:
+
+```go
+hashed, _ := bcrypt.GenerateFromPassword([]byte("your-password"), bcrypt.DefaultCost)
+db.Exec("INSERT INTO users (username, password) VALUES (?, ?)", "your-username", string(hashed))
+```
+
 ## Project Structure
 
 ```text
 main.go                # Entry point
-routes/                # API route handlers
-Dockerfile             # Build instructions
-compose.yaml           # Docker Compose config
-compose.dev.yaml       # Dev Compose config
-compose.prod.yaml      # Prod Compose config
-.github/workflows/     # CI/CD pipeline
+lib/                    # Shared helpers (auth middleware, token generation)
+routes/                 # API route handlers
+Dockerfile              # Build instructions
+compose.yaml             # Docker Compose config
+CREATE_SQLS.sql          # Database schema
+.github/workflows/       # CI/CD pipeline
 ```
 
 ## Future Plans
 
 - Harden for production (security, logging, error handling)
-- Add authentication and rate limiting
+- Add token expiry and refresh
+- Add a signup endpoint
+- Move `trips` off the in-memory fixture and into Postgres
 - Expand API endpoints
-- Automate deployment and scaling
 
 ---

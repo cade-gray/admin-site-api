@@ -72,8 +72,8 @@ jobs:
             echo ${{ secrets.GH_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
             # Create directory if it doesn't exist
-            mkdir -p /srv/docker-go-demo
-            cd /srv/docker-go-demo
+            mkdir -p /srv/admin-site-api
+            cd /srv/admin-site-api
 
             # Pull the latest image
             docker pull ghcr.io/${{ github.repository }}:latest
