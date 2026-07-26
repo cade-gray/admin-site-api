@@ -12,6 +12,15 @@ psql -U postgres
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO gorm;
 GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO gorm;
 
+-- Trigger function used by the updated_at triggers below
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
 -- Create users table
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
@@ -41,6 +50,8 @@ CREATE TABLE projects (
     project_id SERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     description TEXT,
+    github_url VARCHAR(2048),
+    image_url VARCHAR(2048),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -49,3 +60,7 @@ CREATE TRIGGER update_projects_updated_at
     BEFORE UPDATE ON projects
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
+
+-- If the projects table already exists, run these instead of recreating it
+ALTER TABLE projects ADD COLUMN IF NOT EXISTS github_url VARCHAR(2048);
+ALTER TABLE projects ADD COLUMN IF NOT EXISTS image_url VARCHAR(2048);

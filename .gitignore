@@ -29,3 +29,4 @@ compose.dev.yaml
 
 # Environment files
 .env
+postman/Production.postman_environment.json
