@@ -19,6 +19,7 @@ services:
       - DB_USER=user
       - DB_PASSWORD=password
       - DB_NAME=dbname
+      - AUTH_DB_NAME=auth_db
       - DB_PORT=5432
       - DB_SSLMODE=disable
 # The commented out section below is an example of how to define a PostgreSQL

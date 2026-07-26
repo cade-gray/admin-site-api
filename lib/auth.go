@@ -11,12 +11,13 @@ import (
 	"gorm.io/gorm"
 )
 
-// Token represents an issued session token, backed by the tokens table.
+// Token represents an issued session token, backed by auth_db's tokens
+// table (schema: https://github.com/cade-gray/jokedle-api/blob/main/auth-db-setup.sql).
 type Token struct {
-	ID        uint      `json:"-" gorm:"primaryKey"`
+	ID        uint      `json:"-" gorm:"column:idtokens;primaryKey"`
 	Token     string    `json:"-" gorm:"column:token;uniqueIndex"`
 	Username  string    `json:"-" gorm:"column:username"`
-	CreatedAt time.Time `json:"-" gorm:"column:created_at"`
+	CreatedAt time.Time `json:"-" gorm:"column:createdatetime"`
 }
 
 func (Token) TableName() string {
@@ -24,9 +25,10 @@ func (Token) TableName() string {
 }
 
 // GenerateAndStoreToken creates a new random session token for the given
-// username and persists it to the tokens table.
+// username and persists it to the tokens table. auth_db's token column is
+// VARCHAR(45), so this generates 20 random bytes (40 hex chars).
 func GenerateAndStoreToken(db *gorm.DB, username string) (string, error) {
-	buf := make([]byte, 32)
+	buf := make([]byte, 20)
 	if _, err := rand.Read(buf); err != nil {
 		return "", err
 	}

@@ -10,10 +10,11 @@ import (
 	"gorm.io/gorm"
 )
 
-// User is backed by the users table. Password stores a bcrypt hash and is
-// never serialized back to clients.
+// User is backed by auth_db's users table (schema:
+// https://github.com/cade-gray/jokedle-api/blob/main/auth-db-setup.sql).
+// Password stores a bcrypt hash and is never serialized back to clients.
 type User struct {
-	ID       uint   `json:"id" gorm:"primaryKey"`
+	ID       uint   `json:"id" gorm:"column:idusers;primaryKey"`
 	Username string `json:"username" gorm:"column:username"`
 	Password string `json:"-" gorm:"column:password"`
 }

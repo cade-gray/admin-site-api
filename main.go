@@ -16,6 +16,7 @@ func main() {
 	user := os.Getenv("DB_USER")
 	password := os.Getenv("DB_PASSWORD")
 	dbname := os.Getenv("DB_NAME")
+	authDbname := os.Getenv("AUTH_DB_NAME")
 	port := os.Getenv("DB_PORT")
 	sslmode := os.Getenv("DB_SSLMODE")
 
@@ -28,9 +29,18 @@ func main() {
 		panic("failed to connect database")
 	}
 
+	authDsn := fmt.Sprintf(
+		"host=%s user=%s password=%s dbname=%s port=%s sslmode=%s",
+		host, user, password, authDbname, port, sslmode,
+	)
+	authDb, err := gorm.Open(postgres.Open(authDsn), &gorm.Config{})
+	if err != nil {
+		panic("failed to connect auth database")
+	}
+
 	routes.RegisterJokeRoutes(router, db)
 	routes.RegisterPlateRoutes(router, db)
-	routes.RegisterAuthRoutes(router, db)
+	routes.RegisterAuthRoutes(router, authDb)
 	routes.RegisterProjectRoutes(router, db)
 
 	router.Run(":4269")

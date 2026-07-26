@@ -57,6 +57,7 @@ Authenticated routes expect an `Authorization: Bearer <token>` header, using a t
          - DB_USER=user
          - DB_PASSWORD=password
          - DB_NAME=dbname
+         - AUTH_DB_NAME=auth_db
          - DB_PORT=5432
          - DB_SSLMODE=disable
          - RAPIDAPI_KEY=your_rapidapi_key
@@ -72,7 +73,7 @@ Authenticated routes expect an `Authorization: Bearer <token>` header, using a t
 
    ```sh
    export DB_HOST=localhost DB_USER=gorm DB_PASSWORD=your_secure_password \
-          DB_NAME=admin_db DB_PORT=5432 DB_SSLMODE=disable \
+          DB_NAME=admin_db AUTH_DB_NAME=auth_db DB_PORT=5432 DB_SSLMODE=disable \
           RAPIDAPI_KEY=your_rapidapi_key
    go run .
    ```
@@ -103,6 +104,7 @@ Authenticated routes expect an `Authorization: Bearer <token>` header, using a t
          - DB_USER=produser
          - DB_PASSWORD=prodpass
          - DB_NAME=proddb
+         - AUTH_DB_NAME=auth_db
          - DB_PORT=5432
          - DB_SSLMODE=disable
          - RAPIDAPI_KEY=your_rapidapi_key
@@ -159,7 +161,7 @@ Your API will be available at your VPS IP on port 4269.
 
 ## Database Setup
 
-`CREATE_SQLS.sql` contains the full schema (plates, trips\*, projects, users, tokens). Create the database and apply it:
+`CREATE_SQLS.sql` contains the schema for this app's own data (plates, trips\*, projects). Create the database and apply it:
 
 ```sql
 CREATE DATABASE ;
@@ -171,13 +173,19 @@ GRANT ALL PRIVILEGES ON DATABASE admin_db TO gorm;
 psql -U postgres -d admin_db -f CREATE_SQLS.sql
 ```
 
+### Auth database (auth_db)
+
+Login/token data lives in a separate `auth_db` database, shared with [jokedle-api](https://github.com/cade-gray/jokedle-api). Its schema is defined in [`auth-db-setup.sql`](https://github.com/cade-gray/jokedle-api/blob/main/auth-db-setup.sql) in that repo — apply it there rather than in this repo. Point this app at it with the `AUTH_DB_NAME` environment variable (same `DB_HOST`/`DB_USER`/`DB_PASSWORD`/`DB_PORT`/`DB_SSLMODE` as the main database).
+
+For local Docker dev, `db/dev-init/000_auth_db.sql` creates and grants `auth_db` automatically in the same dev Postgres container.
+
 ### Creating a login user
 
-`POST /login` checks the `users` table for a bcrypt-hashed password. There's no signup endpoint yet, so seed a user manually. From a Go shell (`go run`) or `gorm` console:
+`POST /login` checks `auth_db`'s `users` table for a bcrypt-hashed password. There's no signup endpoint yet, so seed a user manually. From a Go shell (`go run`) or `gorm` console:
 
 ```go
 hashed, _ := bcrypt.GenerateFromPassword([]byte("your-password"), bcrypt.DefaultCost)
-db.Exec("INSERT INTO users (username, password) VALUES (?, ?)", "your-username", string(hashed))
+authDb.Exec("INSERT INTO users (username, password) VALUES (?, ?)", "your-username", string(hashed))
 ```
 
 ## Project Structure
