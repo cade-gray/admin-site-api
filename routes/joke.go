@@ -2,14 +2,18 @@ package routes
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"admin-site-api/lib"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
+
+var jokeHTTPClient = &http.Client{Timeout: 8 * time.Second}
 
 // RegisterJokeRoutes wires up POST /joke, which pulls a random joke from the
 // RapidAPI dad-jokes API. Requires a valid bearer token (see lib.AuthenticateToken)
@@ -30,8 +34,9 @@ func RegisterJokeRoutes(router *gin.Engine, db *gorm.DB) {
 		req.Header.Set("X-RapidAPI-Key", apiKey)
 		req.Header.Set("X-RapidAPI-Host", "dad-jokes.p.rapidapi.com")
 
-		resp, err := http.DefaultClient.Do(req)
+		resp, err := jokeHTTPClient.Do(req)
 		if err != nil {
+			log.Printf("joke: request to rapidapi failed: %v", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch joke"})
 			return
 		}
