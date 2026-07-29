@@ -41,6 +41,14 @@ func GenerateAndStoreToken(db *gorm.DB, username string) (string, error) {
 }
 
 
+// isValidTokenForUser reports whether tokenString is a currently issued
+// token belonging to username.
+func isValidTokenForUser(db *gorm.DB, tokenString, username string) bool {
+	var record Token
+	err := db.Where("token = ? AND username = ?", tokenString, username).First(&record).Error
+	return err == nil
+}
+
 func AuthenticateToken(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Get the Authorization header

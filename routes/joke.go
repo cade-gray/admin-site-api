@@ -12,10 +12,10 @@ import (
 )
 
 // RegisterJokeRoutes wires up POST /joke, which pulls a random joke from the
-// RapidAPI dad-jokes API. Requires a valid bearer token (see lib.AuthMiddleware)
+// RapidAPI dad-jokes API. Requires a valid bearer token (see lib.AuthenticateToken)
 // and the RAPIDAPI_KEY environment variable.
 func RegisterJokeRoutes(router *gin.Engine, db *gorm.DB) {
-	router.POST("/joke", lib.AuthMiddleware(db), func(c *gin.Context) {
+	router.POST("/joke", lib.AuthenticateToken(db), func(c *gin.Context) {
 		apiKey := os.Getenv("RAPIDAPI_KEY")
 		if apiKey == "" {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "RAPIDAPI_KEY is not configured"})

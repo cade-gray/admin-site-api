@@ -59,9 +59,9 @@ func RegisterAuthRoutes(router *gin.Engine, db *gorm.DB) {
 		})
 	})
 
-	router.POST("/logout", lib.AuthMiddleware(db), func(c *gin.Context) {
+	router.POST("/logout", lib.AuthenticateToken(db), func(c *gin.Context) {
 		token := c.GetString("token")
-		username := c.GetString("username")
+		username := c.GetString("user")
 
 		result := db.Where("token = ? AND username = ?", token, username).Delete(&lib.Token{})
 		if result.Error != nil {
