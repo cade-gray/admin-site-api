@@ -38,7 +38,7 @@ func main() {
 		panic("failed to connect auth database")
 	}
 
-	routes.RegisterJokeRoutes(router, db)
+	routes.RegisterJokeRoutes(router, authDb)
 	routes.RegisterPlateRoutes(router, db)
 	routes.RegisterAuthRoutes(router, authDb)
 	routes.RegisterProjectRoutes(router, db)
