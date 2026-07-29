@@ -173,6 +173,16 @@ GRANT ALL PRIVILEGES ON DATABASE admin_db TO gorm;
 psql -U postgres -d admin_db -f CREATE_SQLS.sql
 ```
 
+### Seeding project data
+
+`db/dev-init/002_seed_projects.sql` has `INSERT` statements for the `projects` table (converted from a one-off export). It's applied automatically in local Docker dev; to load it elsewhere (e.g. prod), run it directly with `psql`:
+
+```sh
+psql -h <db-host> -U gorm -d admin_db -f db/dev-init/002_seed_projects.sql
+```
+
+There's no uniqueness constraint on `name`, so check the table is empty first if you're not sure whether it's already been seeded.
+
 ### Auth database (auth_db)
 
 Login/token data lives in a separate `auth_db` database, shared with [jokedle-api](https://github.com/cade-gray/jokedle-api). Its schema is defined in [`auth-db-setup.sql`](https://github.com/cade-gray/jokedle-api/blob/main/auth-db-setup.sql) in that repo — apply it there rather than in this repo. Point this app at it with the `AUTH_DB_NAME` environment variable (same `DB_HOST`/`DB_USER`/`DB_PASSWORD`/`DB_PORT`/`DB_SSLMODE` as the main database).

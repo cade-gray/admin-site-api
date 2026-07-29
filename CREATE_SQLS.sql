@@ -44,3 +44,13 @@ CREATE TRIGGER update_projects_updated_at
 -- If the projects table already exists, run these instead of recreating it
 ALTER TABLE projects ADD COLUMN IF NOT EXISTS github_url VARCHAR(2048);
 ALTER TABLE projects ADD COLUMN IF NOT EXISTS image_url VARCHAR(2048);
+
+--------------------------------------------------------------
+-- Re-grant so gorm has access to the tables created above (the earlier
+-- GRANT ALL ON ALL TABLES only covers tables that existed at that point),
+-- and set default privileges so this doesn't need repeating for future
+-- tables.
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO gorm;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO gorm;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO gorm;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO gorm;

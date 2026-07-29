@@ -40,26 +40,51 @@ func GenerateAndStoreToken(db *gorm.DB, username string) (string, error) {
 	return token, nil
 }
 
-// AuthMiddleware validates the "Authorization: Bearer <token>" header against
-// the tokens table. On success it stores "token" and "username" in the gin
-// context for downstream handlers.
-func AuthMiddleware(db *gorm.DB) gin.HandlerFunc {
+
+func AuthenticateToken(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// Get the Authorization header
 		authHeader := c.GetHeader("Authorization")
-		parts := strings.SplitN(authHeader, " ", 2)
-		if len(parts) != 2 || parts[0] != "Bearer" || parts[1] == "" {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Missing or invalid authorization header"})
+		if authHeader == "" {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization header required"})
+			c.Abort()
 			return
 		}
 
-		var record Token
-		if err := db.Where("token = ?", parts[1]).First(&record).Error; err != nil {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
+		// Check Bearer format
+		if !strings.HasPrefix(authHeader, "Bearer ") {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization header must start with Bearer"})
+			c.Abort()
 			return
 		}
 
-		c.Set("token", record.Token)
-		c.Set("username", record.Username)
+		// Extract token string (no UUID validation needed - VARCHAR(45))
+		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+		if tokenString == "" {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Token required"})
+			c.Abort()
+			return
+		}
+
+		// Get user from custom header
+		user := c.GetHeader("X-User")
+		if user == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "X-User header required"})
+			c.Abort()
+			return
+		}
+
+		// Validate token-user combination
+		if !isValidTokenForUser(db, tokenString, user) {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token for user"})
+			c.Abort()
+			return
+		}
+
+		// Store in context
+		c.Set("user", user)
+		c.Set("token", tokenString)
+
 		c.Next()
 	}
 }
