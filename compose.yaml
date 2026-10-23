@@ -12,4 +12,13 @@ services:
       - DB_PORT=5432
       - DB_SSLMODE=disable
       - RAPIDAPI_KEY=
+      # Browser apps allowed to call this API. Credentialed CORS cannot use a
+      # wildcard, so every origin is listed explicitly and Caddy adds none.
+      - CORS_ORIGINS=https://admin.cadegray.dev,https://login.cadegray.dev
+      # Parent domain the cg_session cookie is shared across, so one login at
+      # login.cadegray.dev signs the browser in to every app beneath it.
+      - COOKIE_DOMAIN=.cadegray.dev
+      # Leave unset in production. Set to false only for local HTTP dev,
+      # where browsers refuse to store a Secure cookie.
+      - COOKIE_SECURE=true
     restart: always

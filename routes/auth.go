@@ -52,11 +52,27 @@ func RegisterAuthRoutes(router *gin.Engine, db *gorm.DB) {
 			return
 		}
 
+		// The cookie is what signs the browser in across every app under
+		// COOKIE_DOMAIN. The token stays in the body for non-browser clients
+		// (scripts, Postman) that send it back as a bearer header.
+		if err := lib.IssueSessionCookies(c, token); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create session"})
+			return
+		}
+
 		c.JSON(http.StatusOK, gin.H{
-			"success": true,
-			"message": "Login successful",
-			"token":   token,
+			"success":  true,
+			"message":  "Login successful",
+			"token":    token,
+			"username": user.Username,
 		})
+	})
+
+	// Who the current session belongs to. The browser apps call this on load:
+	// 200 means signed in, 401 means send the visitor to the login page. It is
+	// a GET so it needs no CSRF token.
+	router.GET("/me", lib.AuthenticateToken(db), func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"username": c.GetString("user")})
 	})
 
 	router.POST("/logout", lib.AuthenticateToken(db), func(c *gin.Context) {
@@ -68,8 +84,13 @@ func RegisterAuthRoutes(router *gin.Engine, db *gorm.DB) {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 			return
 		}
+
+		// Clear the cookie whether or not a row went away. A token that was
+		// already deleted still means this browser should end up signed out.
+		lib.ClearSessionCookies(c)
+
 		if result.RowsAffected == 0 {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Token not found"})
+			c.JSON(http.StatusOK, gin.H{"message": "Session already ended"})
 			return
 		}
 
